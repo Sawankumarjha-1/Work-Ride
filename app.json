@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "scheme": "acme",
+    "web": {
+      "bundler": "metro"
+    },
+    "name": "work-ride",
+    "slug": "work-ride",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "userInterfaceStyle": "automatic"
+    },
+    "android": {
+      "userInterfaceStyle": "automatic"
+    }
+  }
+}
