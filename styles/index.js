@@ -97,24 +97,16 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   individualEmployeeHeading: {
-    marginTop: 50,
-    padding: 20,
-    borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    borderColor: "#243F59",
-    backgroundColor: "#243F59",
+    marginTop: 20,
   },
   individualEmployeeHeadingText: {
-    fontSize: 16,
     fontFamily: "MontserratRegular",
-    color: "#C5D877",
+    borderBottomWidth: 1,
+    fontSize: 18,
+    textTransform: "uppercase",
+    padding: 10,
   },
-  individualEmployeeSlide: {
-    backgroundColor: "#eee",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
+  individualEmployeeSlide: {},
 });
 
 export default styles;

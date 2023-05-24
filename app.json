@@ -12,6 +12,7 @@
     },
     "android": {
       "userInterfaceStyle": "automatic"
-    }
+    },
+    "plugins": ["expo-image-picker"]
   }
 }

@@ -1,5 +1,5 @@
-import { Stack } from "expo-router";
-import React, { useState } from "react";
+import { Stack, useRouter } from "expo-router";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   StatusBar,
@@ -16,67 +16,31 @@ import {
 import { View } from "moti";
 import styles from "../styles";
 import AntDesign from "react-native-vector-icons/AntDesign";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import Bottom from "../components/Bottom";
+import GettingAsyncData from "./GettingAsyncData";
 
-const employee = [
-  {
-    name: "Raman Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Sohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Kabir Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-];
 const EmployeePayment = () => {
+  const { user_id } = GettingAsyncData();
   const [modalVisible, setModalVisible] = useState(false);
-  const [btnText, setBtnText] = useState("Previous");
+  const [details, setDetails] = useState({
+    id: "",
+    image: "",
+    worker_id: "",
+    work_type: "",
+  });
   const theme = useColorScheme();
+  const [workerExist, setWorkerExist] = useState(false);
+  const [isLoading, setLoading] = useState(true);
+  const [employee, setEmployee] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [filterArray, setFilterArray] = useState(employee);
   const [notFound, setNotFound] = useState(false);
+  const [amount, setAmount] = useState("");
+  const current_date = new Date().toLocaleDateString();
+  const [dt, setDate] = useState(current_date);
+  const [buttonPress, setButtonPress] = useState(false);
+
   const filteringData = (text) => {
     setSearchText(text);
     if (!text) {
@@ -113,6 +77,62 @@ const EmployeePayment = () => {
       setFilterArray(employee);
     }
   };
+
+  // Getting Data
+  function fecthData() {
+    if (user_id) {
+      fetch(`http://192.168.29.216:5001/api/${user_id}`)
+        .then((response) => response.json())
+        .then((res) => {
+          if (res.status == 401) {
+            alert("Invalid Request !");
+          }
+          if (res.status == 200) {
+            if (res.data[0].workers.length == 0) {
+              setLoading(false);
+              setWorkerExist(false);
+            } else {
+              setWorkerExist(true);
+              setLoading(false);
+              setEmployee(res.data[0].workers);
+              setFilterArray(res.data[0].workers);
+            }
+          }
+        });
+    }
+  }
+  function onPaymentUpdate() {
+    if (amount == "" || dt == "") {
+      return alert("Please fill all the details....");
+    }
+    const id = details.id;
+    if (user_id && id) {
+      setButtonPress(true);
+      fetch(`http://192.168.29.216:5001/api/update_payment/${id}/${user_id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ amount: amount, date: dt }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then((response) => response.json())
+        .then((res) => {
+          if (res.status == 401) {
+            alert("Invalid Request !");
+          }
+          if (res.status == 200) {
+            alert(res.message);
+            setAmount("");
+            setDate(new Date().toLocaleDateString());
+            setButtonPress(false);
+            setModalVisible(false);
+          }
+        });
+    }
+  }
+  useEffect(() => {
+    fecthData();
+  }, [user_id]);
 
   return (
     <SafeAreaView
@@ -188,29 +208,31 @@ const EmployeePayment = () => {
             </TouchableOpacity>
           </View>
 
-          {employee.length && (
-            <Text
-              style={{
-                fontSize: 20,
-                fontFamily: "MontserratSemiBold",
-                marginBottom: 10,
-                marginTop: 40,
-                color: theme == "light" ? "#243F59" : "#fff",
-              }}
-            >
-              Working Employee{" "}
-              <Text style={{ color: "#C5D877" }}> {employee.length}</Text>
+          <Text
+            style={{
+              fontSize: 20,
+              fontFamily: "MontserratSemiBold",
+              marginBottom: 10,
+              marginTop: 40,
+              color: theme == "light" ? "#243F59" : "#fff",
+            }}
+          >
+            Working Employee{" "}
+            <Text style={{ color: "#C5D877" }}>
+              {" "}
+              {filterArray.length ? filterArray.length : 0}
             </Text>
-          )}
-          {employee.length == 0 ? (
+          </Text>
+
+          {isLoading == true ? (
             <ActivityIndicator
               color="#C5D877"
               size="large"
               style={{ marginTop: 50 }}
             />
-          ) : notFound == true ? (
+          ) : workerExist == false || notFound == true ? (
             <Text style={{ color: theme == "light" ? "#243F59" : "#fff" }}>
-              No employee exist with this name !
+              No employee exist!
             </Text>
           ) : (
             filterArray.map((data, index) => {
@@ -227,7 +249,7 @@ const EmployeePayment = () => {
                     duration: 500,
                     delay: 100,
                   }}
-                  key={"employee" + index}
+                  key={"employee_payment" + index}
                   style={{
                     width: "100%",
 
@@ -243,7 +265,7 @@ const EmployeePayment = () => {
                 >
                   <Image
                     source={{
-                      uri: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500",
+                      uri: data.image.url,
                     }}
                     alt="Not Found"
                     style={{ width: 70, height: 70, borderRadius: 50 }}
@@ -259,7 +281,7 @@ const EmployeePayment = () => {
                       {data.name}
                     </Text>
                     <Text style={{ color: "grey", fontSize: 12 }}>
-                      Permanent | Mistri
+                      {data.work_type}
                     </Text>
                   </View>
                   <View
@@ -267,48 +289,27 @@ const EmployeePayment = () => {
                       paddingLeft: 10,
                       flexDirection: "row",
                       alignItems: "center",
-                      justifyContent: "space-between",
+                      justifyContent: "flex-end",
 
                       width: "35%",
                     }}
                   >
                     <TouchableOpacity
                       onPress={() => {
-                        setBtnText("Previous");
+                        setDetails({
+                          id: data.worker_id,
+                          name: data.name,
+                          work_type: data.work_type,
+                          image: data.image.url,
+                        });
                         setModalVisible(true);
                       }}
                     >
-                      <Text
-                        style={[
-                          styles.attendenceText,
-                          {
-                            color: "#243F59",
-                            backgroundColor: "#fff",
-                            fontSize: 14,
-                          },
-                        ]}
-                      >
-                        Prev
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setBtnText("Current");
-                        setModalVisible(true);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.attendenceText,
-                          {
-                            color: "#C5D877",
-                            backgroundColor: "#243F59",
-                            fontSize: 14,
-                          },
-                        ]}
-                      >
-                        Curr
-                      </Text>
+                      <MaterialIcons
+                        name="payments"
+                        size={30}
+                        style={{ color: theme == "light" ? "#243F59" : "#fff" }}
+                      />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -342,34 +343,36 @@ const EmployeePayment = () => {
               justifyContent: "space-between",
             }}
           >
-            <Image
-              source={{
-                uri: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500",
-              }}
-              alt="Not Found"
-              style={{ width: 70, height: 70, borderRadius: 50 }}
-              resizeMode="contain"
-            />
-            <View>
-              <Text style={{ fontSize: 16, color: "#fff" }}>Rohan Sharma</Text>
-              <Text style={{ fontSize: 12, color: "#C5D877" }}>
-                Permanent | Labour
-              </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Image
+                source={{
+                  uri: details.image,
+                }}
+                alt="Not Found"
+                style={{ width: 70, height: 70, borderRadius: 50 }}
+                resizeMode="contain"
+              />
+              <View style={{ paddingHorizontal: 20 }}>
+                <Text style={{ fontSize: 16, color: "#fff" }}>
+                  {details.name}
+                </Text>
+                <Text style={{ fontSize: 12, color: "#C5D877" }}>
+                  {details.work_type}
+                </Text>
+              </View>
             </View>
             <View>
-              <TouchableOpacity>
-                {btnText && (
-                  <Text
-                    style={{
-                      backgroundColor: "#fff",
-                      paddingVertical: 10,
-                      paddingHorizontal: 20,
-                      borderRadius: 50,
-                    }}
-                  >
-                    {btnText}
-                  </Text>
-                )}
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Text
+                  style={{
+                    backgroundColor: "#fff",
+                    paddingVertical: 10,
+                    paddingHorizontal: 20,
+                    borderRadius: 50,
+                  }}
+                >
+                  X
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -386,6 +389,9 @@ const EmployeePayment = () => {
               <TextInput
                 style={[styles.textInput, { borderColor: "#fff" }]}
                 name="date"
+                value={dt}
+                placeholder="DD/MM/YYYY"
+                onChangeText={(text) => setDate(text)}
               />
             </View>
             <View style={styles.formIndividualContainer}>
@@ -400,20 +406,29 @@ const EmployeePayment = () => {
               <TextInput
                 style={[styles.textInput, { borderColor: "#fff" }]}
                 name="amount"
+                value={amount}
+                onChangeText={(text) => setAmount(text)}
               />
             </View>
-            <View style={styles.formIndividualContainer}>
-              <TouchableOpacity
-                style={styles.formBtn}
-                onPress={() => {
-                  setModalVisible(false);
+            {buttonPress == true ? (
+              <View
+                style={{
+                  backgroundColor: "#eee",
+                  paddingVertical: 10,
+                  paddingHorizontal: 20,
+                  borderRadius: 4,
                 }}
               >
-                <Text style={{ textAlign: "center", fontSize: 18 }}>
-                  Update
-                </Text>
+                <ActivityIndicator size={20} color={"#C5D877"} />
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.formBtn}
+                onPress={onPaymentUpdate}
+              >
+                <Text style={styles.formBtnLink}>Update</Text>
               </TouchableOpacity>
-            </View>
+            )}
           </View>
         </View>
       </Modal>

@@ -1,5 +1,5 @@
 import { Stack } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   StatusBar,
@@ -18,61 +18,58 @@ import Bottom from "../components/Bottom";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { View, ScrollView } from "moti";
 import { Skeleton } from "moti/skeleton";
-const employee = [
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-  {
-    name: "Rohan Kumar",
-    image: "",
-    tagline: "",
-  },
-];
+
+import GettingAsyncData from "./GettingAsyncData";
 const EmployerHomeScreen = () => {
   const rout = useRouter();
+
   const theme = useColorScheme();
+  const { company_name, name, image, user_id } = GettingAsyncData();
+  const [workerExist, setWorkerExist] = useState(false);
+  const [isLoading, setLoading] = useState(true);
+  const [workerData, setWorkerData] = useState([]);
+
+  function fecthData() {
+    if (user_id) {
+      fetch(`http://192.168.29.216:5001/api/${user_id.trim()}`)
+        .then((response) => response.json())
+        .then((res) => {
+          if (res.status == 401) {
+            alert("Invalid Request !");
+          }
+          if (res.status == 200) {
+            if (res.data[0].workers.length == 0) {
+              setLoading(false);
+              setWorkerExist(false);
+            } else {
+              setWorkerExist(true);
+              setLoading(false);
+              setWorkerData(res.data[0].workers);
+            }
+          }
+        });
+    }
+  }
+  async function deleteWorker(worker_id) {
+    await fetch(
+      `http://192.168.29.216:5001/api/delete_worker/${user_id}/${worker_id}`,
+      {
+        method: "Delete",
+      }
+    )
+      .then((result) => result.json())
+      .then((res) => {
+        alert(res.message);
+        rout.replace("/EmployerHomeScreen");
+      })
+      .catch((e) => {
+        console.log(e);
+      });
+  }
+
+  useEffect(() => {
+    fecthData();
+  }, [user_id]);
 
   return (
     <SafeAreaView
@@ -107,46 +104,58 @@ const EmployerHomeScreen = () => {
               zIndex: 2,
             }}
           >
-            <Image
-              source={{
-                uri: "https://img.freepik.com/free-photo/portrait-handsome-man-with-dark-hairstyle-bristle-toothy-smile-dressed-white-sweatshirt-feels-very-glad-poses-indoor-pleased-european-guy-being-good-mood-smiles-positively-emotions-concept_273609-61405.jpg",
-              }}
-              alt="Not Found"
-              style={{ width: 150, height: 150, borderRadius: 200 }}
-              resizeMode="contain"
-            />
-
+            <Skeleton
+              colorMode={theme == "light" ? "light" : "dark"}
+              radius="round"
+              height={150}
+              width={150}
+            >
+              {image && (
+                <Image
+                  source={{
+                    uri: image,
+                  }}
+                  alt="Not Found"
+                  style={{ width: 150, height: 150, borderRadius: 200 }}
+                  resizeMode="contain"
+                />
+              )}
+            </Skeleton>
             <View style={{ padding: 20 }}>
-              <Text style={{ color: "#C5D877", fontSize: 20 }}>
-                Rohan Sharma
+              <Text style={{ color: "#C5D877", fontSize: 20 }}>{name}</Text>
+              <Text style={{ color: "#fff", fontSize: 16 }}>
+                {company_name}
               </Text>
-              <Text style={{ color: "#fff", fontSize: 16 }}>Contractor</Text>
             </View>
           </View>
         </ImageBackground>
         <View style={styles.formContainer}>
-          {employee.length && (
-            <Text
-              style={{
-                fontSize: 20,
-                fontFamily: "MontserratSemiBold",
-                marginBottom: 10,
-                marginTop: 40,
-                color: theme == "light" ? "#243F59" : "#fff",
-              }}
-            >
-              Working Employee{" "}
-              <Text style={{ color: "#C5D877" }}> {employee.length}</Text>
+          <Text
+            style={{
+              fontSize: 20,
+              fontFamily: "MontserratSemiBold",
+              marginBottom: 10,
+              marginTop: 40,
+              color: theme == "light" ? "#243F59" : "#fff",
+            }}
+          >
+            Working Employee
+            <Text style={{ color: "#C5D877" }}>
+              {" "}
+              {workerData.length ? workerData.length : 0}
             </Text>
-          )}
-          {employee.length == 0 ? (
+          </Text>
+
+          {isLoading == true ? (
             <ActivityIndicator
               color={theme == "light" ? "#C5D877" : "#fff"}
               size="large"
               style={{ marginTop: 50 }}
             />
+          ) : workerExist == false ? (
+            <Text>No Worker Exist !</Text>
           ) : (
-            employee.map((data, index) => {
+            workerData.map((data, index) => {
               return (
                 <View
                   key={"employee" + index}
@@ -174,7 +183,9 @@ const EmployerHomeScreen = () => {
                   }}
                 >
                   <TouchableOpacity
-                    onPress={() => rout.push("/IndividualEmployee")}
+                    onPress={() =>
+                      rout.push(`/IndividualEmployee?id=${data.worker_id}`)
+                    }
                   >
                     <Skeleton
                       radius="round"
@@ -184,7 +195,7 @@ const EmployerHomeScreen = () => {
                     >
                       <Image
                         source={{
-                          uri: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500",
+                          uri: data.image.url,
                         }}
                         alt="Not Found"
                         style={{ width: 70, height: 70, borderRadius: 50 }}
@@ -202,7 +213,7 @@ const EmployerHomeScreen = () => {
                       {data.name}
                     </Text>
                     <Text style={{ color: "grey", fontSize: 12 }}>
-                      Permanent | Mistri
+                      {data.work_type}
                     </Text>
                   </View>
                   <View
@@ -215,27 +226,31 @@ const EmployerHomeScreen = () => {
                       width: "25%",
                     }}
                   >
-                    <TouchableOpacity>
-                      <Link href="/EditEmployee">
-                        <Entypo
-                          name="edit"
-                          size={20}
-                          style={{
-                            color: "skyblue",
-                            padding: 10,
-                          }}
-                        />
-                      </Link>
+                    <TouchableOpacity
+                      onPress={() =>
+                        rout.push(`/EditEmployee?id=${data.worker_id}`)
+                      }
+                    >
+                      <Entypo
+                        name="edit"
+                        size={20}
+                        style={{
+                          color: "skyblue",
+                          padding: 10,
+                        }}
+                      />
                     </TouchableOpacity>
 
-                    <TouchableOpacity>
-                      <Link href="">
-                        <AntDesign
-                          name="delete"
-                          size={20}
-                          style={{ color: "red" }}
-                        />
-                      </Link>
+                    <TouchableOpacity
+                      onPress={() => {
+                        deleteWorker(data.worker_id);
+                      }}
+                    >
+                      <AntDesign
+                        name="delete"
+                        size={20}
+                        style={{ color: "red" }}
+                      />
                     </TouchableOpacity>
                   </View>
                 </View>

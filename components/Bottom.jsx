@@ -6,9 +6,17 @@ import MaterialIcon from "react-native-vector-icons/MaterialIcons";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { View } from "moti";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 const Bottom = ({ active }) => {
   const rout = useRouter();
   const theme = useColorScheme();
+  const removeValue = async (key) => {
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch (e) {
+      // remove error
+    }
+  };
   return (
     <View
       from={{
@@ -17,7 +25,7 @@ const Bottom = ({ active }) => {
       animate={{
         translateY: 0,
       }}
-      transition={{ type: "timing", duration: 500, delay: 100 }}
+      transition={{ type: "timing", duration: 400, delay: 100 }}
       style={{
         position: "absolute",
         bottom: 0,
@@ -74,7 +82,16 @@ const Bottom = ({ active }) => {
           ]}
         />
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => rout.replace("/")}>
+      <TouchableOpacity
+        onPress={() => {
+          removeValue("name");
+          removeValue("company_name");
+          removeValue("image");
+          removeValue("user_id");
+          removeValue("Category");
+          rout.replace("/home");
+        }}
+      >
         <MaterialIcon
           name="logout"
           size={30}

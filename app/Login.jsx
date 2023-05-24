@@ -1,5 +1,5 @@
 import { Stack, useSearchParams } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   StatusBar,
@@ -12,15 +12,141 @@ import {
   View,
   KeyboardAvoidingView,
   useColorScheme,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import styles from "../styles";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Login = () => {
   const searchParam = useSearchParams();
   const rout = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [workerId, setWorkerId] = useState("");
+  const [employerId, setEmployerId] = useState("");
+  const [workerPassword, setWorkerPassword] = useState("");
   const [formUser, setFormUser] = useState(searchParam["name"] || "Employer");
   const theme = useColorScheme();
+  const [buttonPress, setButtonPress] = useState(false);
+  const [workerButtonPress, setWorkerButtonPress] = useState(false);
+  const [comment, setComment] = useState("");
+  const [workerComment, setWorkerComment] = useState("");
+  const getData = async () => {
+    try {
+      const name = await AsyncStorage.getItem("name");
+      const company_name = await AsyncStorage.getItem("company_name");
+      const image = await AsyncStorage.getItem("image");
+      const user_id = await AsyncStorage.getItem("user_id");
+      // console.log(name + "\n" + image + "\n" + user_id + "\n" + company_name);
+      if (
+        name != null &&
+        company_name != null &&
+        image != null &&
+        user_id != null
+      ) {
+        rout.replace("/EmployerHomeScreen");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  const storeUser = async (name, value) => {
+    try {
+      await AsyncStorage.setItem(name, value);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    getData();
+  }, []);
+  const OnEmployerLogin = async () => {
+    setButtonPress(true);
+    if (email == "" || password == "") {
+      setButtonPress(false);
+      return setComment("Please fill all details!");
+    } else {
+      setButtonPress(true);
+      setComment("");
+    }
+
+    fetch("http://192.168.29.216:5001/api/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.status == 401) {
+          setButtonPress(false);
+          return setComment(result.message);
+        }
+
+        if (result.status == 200) {
+          storeUser("name", result.data.name);
+          storeUser("company_name", result.data.company_name);
+          storeUser("image", result.data.image.url);
+          storeUser("user_id", result.data.email);
+          storeUser("Category", "Employer");
+          setEmail("");
+          setPassword("");
+          setComment("");
+          rout.replace("/EmployerHomeScreen");
+          setButtonPress(false);
+        }
+      })
+      .catch((error) => {
+        console.log("Upload error:", error);
+      });
+  };
+  const OnWorkerLogin = async () => {
+    setWorkerButtonPress(true);
+    if (workerId == "" || employerId == "" || workerPassword == "") {
+      setWorkerButtonPress(false);
+      return setWorkerComment("Please fill all details!");
+    } else {
+      setWorkerButtonPress(true);
+      setWorkerComment("");
+    }
+
+    fetch("http://192.168.29.216:5001/api/worker_login", {
+      method: "POST",
+      body: JSON.stringify({ employerId, workerId, password: workerPassword }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.status == 401) {
+          setWorkerButtonPress(false);
+          return setWorkerComment(result.message);
+        }
+
+        if (result.status == 200) {
+          // console.log(result.data.workers[0].name);
+          storeUser("worker_name", result.data.workers[0].name);
+          storeUser("work_type", result.data.workers[0].work_type);
+          storeUser("image", result.data.workers[0].image.url);
+          storeUser("worker_id", result.data.workers[0].worker_id);
+          storeUser("employer_id", employerId);
+          storeUser("Category", "Worker");
+          setWorkerId("");
+          setWorkerPassword("");
+          setWorkerComment("");
+          rout.replace("/EmployeeHomeScreen");
+          setWorkerButtonPress(false);
+        }
+      })
+      .catch((error) => {
+        console.log("Upload error:", error);
+      });
+  };
+
   function loginForm() {
     switch (formUser) {
       case "Employer":
@@ -28,6 +154,18 @@ const Login = () => {
           <View style={{ marginVertical: 50, marginHorizontal: 20 }}>
             <KeyboardAvoidingView>
               {/*Input Fields*/}
+              {comment && (
+                <Text
+                  style={{
+                    color: "red",
+                    fontFamily: "MontserratRegular",
+                    letterSpacing: 1.2,
+                    marginBottom: 20,
+                  }}
+                >
+                  {comment}
+                </Text>
+              )}
               <View style={styles.formIndividualContainer}>
                 <Text
                   style={
@@ -38,7 +176,12 @@ const Login = () => {
                 >
                   Username / Email
                 </Text>
-                <TextInput style={styles.textInput} name="employer_username" />
+                <TextInput
+                  style={styles.textInput}
+                  name="employer_username"
+                  value={email}
+                  onChangeText={(text) => setEmail(text)}
+                />
               </View>
               <View style={styles.formIndividualContainer}>
                 <Text
@@ -50,10 +193,18 @@ const Login = () => {
                 >
                   Password
                 </Text>
-                <TextInput style={styles.textInput} name="employer_password" />
+                <TextInput
+                  style={styles.textInput}
+                  name="employer_password"
+                  value={password}
+                  onChangeText={(text) => setPassword(text)}
+                />
               </View>
               {/*Forget Password*/}
-              <TouchableOpacity style={{ marginBottom: 20 }}>
+              <TouchableOpacity
+                style={{ marginBottom: 20 }}
+                onPress={() => rout.replace("/ForgetPassword")}
+              >
                 <Text
                   style={{
                     color: "#C5D877",
@@ -65,12 +216,25 @@ const Login = () => {
               </TouchableOpacity>
               {/*Signup Btn*/}
               <View style={styles.formIndividualContainer}>
-                <TouchableOpacity
-                  style={styles.formBtn}
-                  onPress={() => rout.push("/EmployerHomeScreen")}
-                >
-                  <Text style={styles.formBtnLink}>Login</Text>
-                </TouchableOpacity>
+                {buttonPress == true ? (
+                  <View
+                    style={{
+                      backgroundColor: "#eee",
+                      paddingVertical: 10,
+                      paddingHorizontal: 20,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <ActivityIndicator size={20} color={"#C5D877"} />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.formBtn}
+                    onPress={OnEmployerLogin}
+                  >
+                    <Text style={styles.formBtnLink}>Login</Text>
+                  </TouchableOpacity>
+                )}
               </View>
               {/*Don't have an account section */}
               <View style={{ marginTop: 20, flexDirection: "row" }}>
@@ -98,6 +262,38 @@ const Login = () => {
           <View style={{ marginVertical: 50, marginHorizontal: 20 }}>
             <KeyboardAvoidingView>
               {/*Input Fields*/}
+              {workerComment && (
+                <Text
+                  style={{
+                    color: "red",
+                    fontFamily: "MontserratRegular",
+                    letterSpacing: 1.2,
+                    marginBottom: 20,
+                  }}
+                >
+                  {workerComment}
+                </Text>
+              )}
+
+              <View style={styles.formIndividualContainer}>
+                <Text
+                  style={
+                    theme == "light"
+                      ? styles.individualInputFieldText
+                      : styles.darkIndividualInputFieldText
+                  }
+                >
+                  Employer Id
+                </Text>
+                <TextInput
+                  style={styles.textInput}
+                  name="employer_id"
+                  value={employerId}
+                  onChangeText={(text) => {
+                    setEmployerId(text);
+                  }}
+                />
+              </View>
 
               <View style={styles.formIndividualContainer}>
                 <Text
@@ -109,7 +305,14 @@ const Login = () => {
                 >
                   Worker Id
                 </Text>
-                <TextInput style={styles.textInput} name="worker_username" />
+                <TextInput
+                  style={styles.textInput}
+                  name="worker_id"
+                  value={workerId}
+                  onChangeText={(text) => {
+                    setWorkerId(text);
+                  }}
+                />
               </View>
               <View style={styles.formIndividualContainer}>
                 <Text
@@ -121,17 +324,37 @@ const Login = () => {
                 >
                   Password
                 </Text>
-                <TextInput style={styles.textInput} name="worker_password" />
+                <TextInput
+                  style={styles.textInput}
+                  name="worker_password"
+                  value={workerPassword}
+                  onChangeText={(text) => {
+                    setWorkerPassword(text);
+                  }}
+                />
               </View>
 
               {/*Signup Btn*/}
               <View style={styles.formIndividualContainer}>
-                <TouchableOpacity
-                  style={styles.formBtn}
-                  onPress={() => rout.replace("/EmployeeHomeScreen")}
-                >
-                  <Text style={styles.formBtnLink}>Login</Text>
-                </TouchableOpacity>
+                {workerButtonPress == true ? (
+                  <View
+                    style={{
+                      backgroundColor: "#eee",
+                      paddingVertical: 10,
+                      paddingHorizontal: 20,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <ActivityIndicator size={20} color={"#C5D877"} />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.formBtn}
+                    onPress={OnWorkerLogin}
+                  >
+                    <Text style={styles.formBtnLink}>Login</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </KeyboardAvoidingView>
           </View>

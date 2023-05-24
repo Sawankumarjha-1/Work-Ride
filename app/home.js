@@ -1,5 +1,5 @@
-import { Link, Stack, useRouter } from "expo-router";
-import React from "react";
+import { Stack, useRouter } from "expo-router";
+import React, { useEffect } from "react";
 import { MotiImage, MotiView } from "moti";
 import {
   View,
@@ -11,7 +11,27 @@ import {
   useColorScheme,
 } from "react-native";
 import { ImageBackground } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 const Home = () => {
+  const getData = async () => {
+    try {
+      const Category = await AsyncStorage.getItem("Category");
+
+      // console.log(name + "\n" + image + "\n" + user_id + "\n" + company_name);
+      if (Category != null) {
+        if (Category == "Employer") {
+          rout.replace("/EmployerHomeScreen");
+        } else {
+          rout.replace("/EmployeeHomeScreen");
+        }
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  useEffect(() => {
+    getData();
+  });
   const rout = useRouter();
   const theme = useColorScheme();
   return (
